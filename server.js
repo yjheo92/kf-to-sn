@@ -8,7 +8,7 @@ require('dotenv').config();
 
 const { parseKissflowHTML } = require('./parser');
 const { ServiceNowClient } = require('./snowClient');
-const { saveDraft, listDrafts, getDraft, deleteDraft, adminGetTables, adminGetRows, adminDeleteRow } = require('./db');
+const { initDb, saveDraft, listDrafts, getDraft, deleteDraft, adminGetTables, adminGetRows, adminDeleteRow } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -261,11 +261,11 @@ function cleanup(paths) {
 // cat_item sys_id 는 1번 호출(Catalog Item 생성) 결과를 사용해야 하므로
 // 스크립트에서 CAT_ITEM_ID 변수로 치환하여 표시합니다.
 // ═════════════════════════════════════════════════════════════
-app.get('/api/snow/curl-preview/:draftId', (req, res) => {
+app.get('/api/snow/curl-preview/:draftId', async (req, res) => {
   if (!snowClient)
     return res.status(400).json({ success: false, error: 'ServiceNow에 먼저 연결하세요' });
 
-  const draft = getDraft(Number(req.params.draftId));
+  const draft = await getDraft(Number(req.params.draftId));
   if (!draft) return res.status(404).json({ success: false, error: 'Draft를 찾을 수 없습니다' });
 
   const BASE   = snowClient.baseUrl;
@@ -700,11 +700,11 @@ app.post('/api/snow/create-manual', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 
 // 저장 또는 업데이트
-app.post('/api/drafts', (req, res) => {
+app.post('/api/drafts', async (req, res) => {
   try {
     const { id, name, catalogName, catalogDescription, fields, clientScripts } = req.body;
     if (!name) return res.status(400).json({ success: false, error: '저장 이름을 입력하세요' });
-    const result = saveDraft({ id, name, catalogName, catalogDescription, fields, clientScripts });
+    const result = await saveDraft({ id, name, catalogName, catalogDescription, fields, clientScripts });
     res.json({ success: true, ...result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -712,18 +712,18 @@ app.post('/api/drafts', (req, res) => {
 });
 
 // 목록
-app.get('/api/drafts', (req, res) => {
+app.get('/api/drafts', async (req, res) => {
   try {
-    res.json({ success: true, drafts: listDrafts() });
+    res.json({ success: true, drafts: await listDrafts() });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });
 
 // 단건 불러오기
-app.get('/api/drafts/:id', (req, res) => {
+app.get('/api/drafts/:id', async (req, res) => {
   try {
-    const draft = getDraft(Number(req.params.id));
+    const draft = await getDraft(Number(req.params.id));
     if (!draft) return res.status(404).json({ success: false, error: '저장 항목을 찾을 수 없습니다' });
     res.json({ success: true, draft });
   } catch (e) {
@@ -732,9 +732,9 @@ app.get('/api/drafts/:id', (req, res) => {
 });
 
 // 삭제
-app.delete('/api/drafts/:id', (req, res) => {
+app.delete('/api/drafts/:id', async (req, res) => {
   try {
-    const ok = deleteDraft(Number(req.params.id));
+    const ok = await deleteDraft(Number(req.params.id));
     res.json({ success: ok });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -748,19 +748,19 @@ app.get('/db-admin', (req, res) => {
   res.send(dbAdminHtml());
 });
 
-app.get('/api/db-admin/tables', (req, res) => {
-  try { res.json({ success: true, tables: adminGetTables() }); }
+app.get('/api/db-admin/tables', async (req, res) => {
+  try { res.json({ success: true, tables: await adminGetTables() }); }
   catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-app.get('/api/db-admin/rows/:table', (req, res) => {
-  try { res.json({ success: true, rows: adminGetRows(req.params.table) }); }
+app.get('/api/db-admin/rows/:table', async (req, res) => {
+  try { res.json({ success: true, rows: await adminGetRows(req.params.table) }); }
   catch(e) { res.status(400).json({ success: false, error: e.message }); }
 });
 
-app.delete('/api/db-admin/rows/:table/:id', (req, res) => {
+app.delete('/api/db-admin/rows/:table/:id', async (req, res) => {
   try {
-    const ok = adminDeleteRow(req.params.table, Number(req.params.id));
+    const ok = await adminDeleteRow(req.params.table, Number(req.params.id));
     res.json({ success: ok });
   } catch(e) { res.status(400).json({ success: false, error: e.message }); }
 });
@@ -922,8 +922,9 @@ loadTables();
 }
 
 // ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`
+initDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║   Kissflow → ServiceNow Migration Server                 ║
 ║   http://localhost:${PORT}                                  ║
@@ -931,4 +932,5 @@ app.listen(PORT, () => {
 ║   지원: HTML 단독 | HTML+JS+CSS 묶음 | ZIP 업로드         ║
 ╚══════════════════════════════════════════════════════════╝
 `);
-});
+  });
+}).catch(e => { console.error('DB 초기화 실패:', e); process.exit(1); });
