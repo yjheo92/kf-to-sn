@@ -1,0 +1,2177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ServiceNow Catalog Builder</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --border: #dde1e7;
+  --accent: #1a73e8;
+  --green: #1e8a3e;
+  --yellow: #b45309;
+  --red: #c62828;
+  --purple: #6d28d9;
+  --cyan: #0369a1;
+  --orange: #c2410c;
+  --text: #1a1f2e;
+  --sub: #5f6b7a;
+}
+body {
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ── Layout ── */
+.hdr {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.hdr-logo {
+  width: 42px; height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.hdr h1 { font-size: 18px; font-weight: 800; }
+.hdr p { font-size: 13px; color: var(--sub); margin-top: 2px; }
+.conn-badge {
+  margin-left: auto;
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.conn-badge.on { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.conn-badge.off { background: var(--bg); border: 1px solid var(--border); color: var(--sub); }
+
+.wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.card-ttl {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+.section-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ── Form elements ── */
+label.lbl {
+  display: block;
+  font-size: 12px;
+  color: var(--sub);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+input, select, textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border 0.2s;
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select { cursor: pointer; }
+input[type=checkbox] { width: auto; cursor: pointer; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media(max-width: 700px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+/* ── Buttons ── */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--surface); border: 1px solid var(--border); color: var(--sub); }
+.btn-success { background: var(--green); color: #fff; }
+.btn-danger { background: #fff1f0; border: 1px solid #fca5a5; color: var(--red); }
+.btn-purple { background: #f5f3ff; border: 1px solid #c4b5fd; color: var(--purple); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+/* ── Alerts ── */
+.alert-success { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 16px; color: var(--green); }
+.alert-error { background: #fff1f0; border: 1px solid #fca5a5; border-radius: 10px; padding: 16px; color: var(--red); }
+.info-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 14px; color: var(--sub); line-height: 1.7; }
+
+/* ── Logs ── */
+.logs {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.log-s { color: var(--green); }
+.log-e { color: var(--red); }
+.log-i { color: var(--sub); }
+
+.progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin: 12px 0; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+.hidden { display: none !important; }
+
+/* ── Field Builder ── */
+.field-list { display: flex; flex-direction: column; gap: 10px; }
+
+.field-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  transition: border 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.field-row:hover { border-color: var(--accent); }
+.field-row.requester-row { border-color: #86efac; background: #f0fdf4; }
+
+.field-row-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.field-row-num {
+  background: var(--border);
+  color: var(--sub);
+  border-radius: 6px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.field-type-badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.type-text    { background: #eff6ff; color: #1d4ed8; }
+.type-currency{ background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+.type-dropdown{ background: #f5f3ff; color: var(--purple); }
+.type-ref     { background: #ecfeff; color: var(--cyan); }
+.type-attach  { background: #fff7ed; color: var(--orange); }
+.type-date    { background: #fefce8; color: var(--yellow); }
+.type-section { background: #f1f5f9; color: var(--sub); }
+.type-label   { background: #f0fdf4; color: var(--green); }
+.type-macro   { background: #fdf4ff; color: #a21caf; }
+
+.cs-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.cs-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.cs-row textarea {
+  width: 100%;
+  min-height: 160px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f8f9fa;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.cs-field-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  min-width: 220px;
+}
+.cs-field-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.cs-field-checklist label:hover { background: #f5f3ff; border-radius: 4px; padding: 2px 4px; }
+
+.field-row-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-row-body.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+.field-row-body.cols1 { grid-template-columns: 1fr; }
+@media(max-width:700px){ .field-row-body, .field-row-body.cols3 { grid-template-columns: 1fr; } }
+
+.field-extra { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-extra.cols1 { grid-template-columns: 1fr; }
+@media(max-width:700px){ .field-extra, .field-extra.cols1 { grid-template-columns: 1fr; } }
+
+/* Dropdown options */
+.options-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.option-row { display: flex; gap: 8px; align-items: center; }
+.option-row input { flex: 1; }
+.option-del { padding: 6px 10px; font-size: 13px; background: #fff1f0; border: 1px solid #fca5a5; border-radius: 6px; color: var(--red); cursor: pointer; flex-shrink: 0; }
+
+/* Section divider */
+.section-divider {
+  background: #f8fafc;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-divider input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 4px 0;
+}
+.section-divider input:focus { border: none; outline: none; }
+.section-divider input::placeholder { color: #94a3b8; }
+
+/* Guide block */
+.guide-block-item {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 16px;
+}
+.guide-toolbar {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.guide-toolbar button {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.guide-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+.guide-toolbar select { width: auto; padding: 4px 8px; font-size: 12px; }
+.guide-content {
+  min-height: 80px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.guide-content:focus { border-color: var(--accent); }
+
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  flex-shrink: 0;
+  user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+
+.field-row.drag-over,
+.section-divider.drag-over,
+.guide-block-item.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  background: #eff6ff;
+}
+.field-row.dragging,
+.section-divider.dragging,
+.guide-block-item.dragging {
+  opacity: 0.4;
+}
+
+.chip-requester {
+  font-size: 11px;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: var(--green);
+  border-radius: 12px;
+  padding: 2px 9px;
+  font-weight: 700;
+}
+
+/* ── onChange Rule Panel ── */
+.onchange-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid #e0e7ff;
+  background: #f8f7ff;
+  border-radius: 0 0 8px 8px;
+  padding: 14px;
+}
+.onchange-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.onchange-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  border-radius: 6px;
+  color: var(--purple);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.onchange-toggle-btn:hover { background: #ede9fe; }
+.onchange-toggle-btn.has-rules {
+  background: #ede9fe;
+  border-color: var(--purple);
+}
+.onchange-rule-group {
+  background: #fff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.onchange-rule-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.onchange-rule-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.onchange-action-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  background: #f8f7ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+@media(max-width:700px) { .onchange-action-row { grid-template-columns: 1fr 1fr; } }
+.onchange-action-row select,
+.onchange-action-row input { padding: 7px 10px; font-size: 13px; }
+.onchange-action-hdr {
+  display: grid;
+  grid-template-columns: 160px 1fr 1fr auto;
+  gap: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sub);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.action-del-btn {
+  padding: 6px 10px;
+  font-size: 12px;
+  background: #fff1f0;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  color: var(--red);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip-onchange {
+  font-size: 11px;
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+  color: var(--purple);
+  border-radius: 12px;
+  padding: 2px 9px;
+  font-weight: 700;
+}
+
+/* ── Draft (임시저장) ── */
+.draft-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.07);
+}
+.draft-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.draft-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: default;
+  transition: border 0.2s;
+}
+.draft-item:hover { border-color: var(--accent); }
+.draft-item-info { flex: 1; min-width: 0; }
+.draft-item-name { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.draft-item-meta { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.draft-empty { text-align: center; padding: 20px; color: var(--sub); font-size: 14px; }
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-logo">⚙</div>
+  <div>
+    <h1>ServiceNow Catalog Builder</h1>
+    <p>수동으로 Catalog Item을 구성하고 ServiceNow에 직접 생성합니다</p>
+  </div>
+  <div id="connBadge" class="conn-badge off">연결 안됨</div>
+</header>
+
+<div class="wrap">
+
+  <!-- Draft: 임시저장 / 불러오기 -->
+  <div class="draft-panel">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;">
+        <span style="font-size:15px;font-weight:700;">💾 작업 저장</span>
+        <input id="draftName" placeholder="저장 이름 입력 (예: 경조사신청_v1)" style="flex:1;padding:9px 12px;font-size:13px;">
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn btn-primary" style="padding:9px 18px;font-size:13px;" onclick="saveDraftUI()">저장</button>
+        <button class="btn btn-secondary" style="padding:9px 18px;font-size:13px;" onclick="loadDraftListUI()">📂 목록 새로고침</button>
+      </div>
+      <span id="draftMsg" style="font-size:13px;"></span>
+    </div>
+    <div id="draftListWrap">
+      <div class="draft-empty" style="margin-top:10px;">저장된 작업이 없습니다 (목록 새로고침을 눌러주세요)</div>
+    </div>
+  </div>
+
+  <!-- Step 1: 연결 -->
+  <div class="card">
+    <div class="card-ttl"><span class="section-badge">1</span> ServiceNow 연결</div>
+    <div class="grid3">
+      <div>
+        <label class="lbl">Instance URL</label>
+        <input id="snowInst" placeholder="your-instance 또는 https://...">
+      </div>
+      <div>
+        <label class="lbl">Username</label>
+        <input id="snowUser" placeholder="admin">
+      </div>
+      <div>
+        <label class="lbl">Password</label>
+        <input type="password" id="snowPass" placeholder="••••••••">
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:16px; align-items:center;">
+      <button id="connectBtn" class="btn btn-primary">연결 테스트</button>
+      <span id="connMsg" style="font-size:14px;"></span>
+    </div>
+  </div>
+
+  <!-- Step 2: Catalog 기본 정보 -->
+  <div class="card">
+    <div class="card-ttl"><span class="section-badge">2</span> Catalog Item 기본 정보</div>
+    <div class="grid2">
+      <div>
+        <label class="lbl">Catalog Item 이름 *</label>
+        <input id="catName" placeholder="예: 경조사 신청">
+      </div>
+      <div>
+        <label class="lbl">설명 (short_description)</label>
+        <input id="catDesc" placeholder="예: 경조사 관련 신청 양식">
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: 필드 구성 -->
+  <div class="card">
+    <div class="card-ttl"><span class="section-badge">3</span> 필드 구성</div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px;" id="addBtnsTop">
+      <button class="btn btn-secondary" onclick="addField('text')">+ 텍스트</button>
+      <button class="btn btn-secondary" onclick="addField('textarea')">+ 텍스트 영역</button>
+      <button class="btn btn-secondary" onclick="addField('number')">+ 숫자</button>
+      <button class="btn btn-secondary" onclick="addField('currency')">+ 통화/금액</button>
+      <button class="btn btn-secondary" onclick="addField('date')">+ 날짜</button>
+      <button class="btn btn-secondary" onclick="addField('datetime')">+ 날짜/시간</button>
+      <button class="btn btn-secondary" onclick="addField('boolean')">+ 체크박스</button>
+      <button class="btn btn-secondary" onclick="addField('dropdown')">+ 드롭다운</button>
+      <button class="btn btn-secondary" onclick="addField('multiselect')">+ 다중선택</button>
+      <button class="btn btn-secondary" onclick="addField('reference')">+ Reference</button>
+      <button class="btn btn-secondary" onclick="addField('attachment')">+ 첨부파일</button>
+      <button class="btn btn-purple" onclick="addField('macro')">+ Macro/버튼</button>
+      <button class="btn btn-purple" onclick="addField('section')">+ 섹션 구분</button>
+      <button class="btn btn-purple" onclick="addField('label')">+ 안내문 블록</button>
+    </div>
+
+    <div id="fieldList" class="field-list">
+      <div style="text-align:center; padding:32px; color:var(--sub); font-size:14px; border:1px dashed var(--border); border-radius:10px;">
+        위 버튼으로 필드를 추가하세요
+      </div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      <span style="font-size:13px;color:var(--sub);align-self:center;margin-right:4px;">필드 추가:</span>
+      <button class="btn btn-secondary" onclick="addField('text')">+ 텍스트</button>
+      <button class="btn btn-secondary" onclick="addField('textarea')">+ 텍스트 영역</button>
+      <button class="btn btn-secondary" onclick="addField('number')">+ 숫자</button>
+      <button class="btn btn-secondary" onclick="addField('currency')">+ 통화/금액</button>
+      <button class="btn btn-secondary" onclick="addField('date')">+ 날짜</button>
+      <button class="btn btn-secondary" onclick="addField('datetime')">+ 날짜/시간</button>
+      <button class="btn btn-secondary" onclick="addField('boolean')">+ 체크박스</button>
+      <button class="btn btn-secondary" onclick="addField('dropdown')">+ 드롭다운</button>
+      <button class="btn btn-secondary" onclick="addField('multiselect')">+ 다중선택</button>
+      <button class="btn btn-secondary" onclick="addField('reference')">+ Reference</button>
+      <button class="btn btn-secondary" onclick="addField('attachment')">+ 첨부파일</button>
+      <button class="btn btn-purple" onclick="addField('macro')">+ Macro/버튼</button>
+      <button class="btn btn-purple" onclick="addField('section')">+ 섹션 구분</button>
+      <button class="btn btn-purple" onclick="addField('label')">+ 안내문 블록</button>
+    </div>
+  </div>
+
+  <!-- Step 3.5: Client Script 직접 입력 -->
+  <div class="card">
+    <div class="card-ttl"><span class="section-badge">+</span> Client Script 직접 추가 <span style="font-size:13px;font-weight:400;color:var(--sub);">(선택)</span></div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:12px;">
+      온로드/온체인지/온서브밋 동작을 코드로 직접 작성할 수 있습니다. 위 필드 구성에서 자동 생성된 스크립트 외에 추가로 생성됩니다.
+    </p>
+    <div id="csList" style="display:flex;flex-direction:column;gap:10px;"></div>
+    <button class="btn btn-secondary" style="margin-top:10px;" onclick="addClientScript()">+ Client Script 추가</button>
+  </div>
+
+  <!-- Step 4: 생성 -->
+  <div class="card">
+    <div class="card-ttl"><span class="section-badge">4</span> ServiceNow에 생성</div>
+
+    <div id="previewBox" class="info-box" style="margin-bottom:16px;">
+      구성된 필드가 여기에 요약됩니다.
+    </div>
+
+    <button id="createBtn" class="btn btn-success" style="width:100%; padding:15px; font-size:16px;">
+      ServiceNow에 생성하기
+    </button>
+    <button id="apiPreviewBtn" class="btn btn-secondary" style="width:100%; padding:11px; font-size:14px; margin-top:8px;">
+      🔍 API 요청 미리보기 (curl)
+    </button>
+
+    <div id="progressDiv" class="hidden" style="margin-top:14px;">
+      <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div id="logsDiv" class="hidden" style="margin-top:16px;">
+      <div style="font-size:14px; font-weight:700; margin-bottom:10px;">실행 로그</div>
+      <div id="logsEl" class="logs"></div>
+    </div>
+
+    <div id="resultDiv" class="hidden alert-success" style="margin-top:16px;">
+      <div style="font-weight:700; margin-bottom:8px; font-size:16px;">생성 완료!</div>
+      <a id="resultLink" href="#" target="_blank" style="color:var(--green); font-size:15px;">ServiceNow에서 열기 →</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- API 미리보기 모달 -->
+<div id="apiPreviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;overflow-y:auto;">
+  <div style="max-width:900px;margin:40px auto;background:var(--card);border-radius:14px;padding:28px 32px;position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:700;margin:0;">🔍 API 요청 미리보기</h2>
+      <button onclick="document.getElementById('apiPreviewModal').style.display='none'"
+        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--sub);">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:16px;">
+      "ServiceNow에 생성하기" 클릭 시 순서대로 호출될 API 목록입니다.<br>
+      <code style="background:var(--bg);padding:2px 6px;border-radius:4px;">CAT_ITEM_ID</code>,
+      <code style="background:var(--bg);padding:2px 6px;border-radius:4px;">$VAR_필드명</code> 은 이전 호출 결과의 sys_id로 교체하세요.
+    </p>
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="copyAllCurls()">📋 전체 복사</button>
+      <span id="copyMsg" style="font-size:12px;color:var(--green);"></span>
+    </div>
+    <div id="apiPreviewList"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let fieldRows = [];   // { id, type, el }
+let rowCounter = 0;
+
+const SYS_USER_COLS = [
+  'user_name','first_name','last_name','email',
+  'department','title','company','employee_number',
+  'phone','manager','middle_name','mobile_phone',
+  'location','cost_center','employee_type',
+];
+
+const SNOW_TYPES = {
+  text:       { type: '6',  label: '텍스트',      badge: 'type-text' },
+  textarea:   { type: '2',  label: '텍스트 영역', badge: 'type-text' },
+  number:     { type: '6',  label: '숫자',         badge: 'type-text' },
+  currency:   { type: '6',  label: '통화/금액',    badge: 'type-currency' },
+  date:       { type: '9',  label: '날짜',         badge: 'type-date' },
+  datetime:   { type: '10', label: '날짜/시간',    badge: 'type-date' },
+  boolean:    { type: '1',  label: 'Yes/No',       badge: 'type-date' },
+  dropdown:   { type: '5',  label: '드롭다운',     badge: 'type-dropdown' },
+  multiselect:{ type: '21', label: '다중선택',     badge: 'type-dropdown' },
+  reference:  { type: '8',  label: 'Reference',    badge: 'type-ref' },
+  attachment: { type: '33', label: '첨부파일',     badge: 'type-attach' },
+  macro:      { type: '15', label: 'Macro/버튼',   badge: 'type-macro' },
+  section:    { type: '11', label: '섹션 구분',    badge: 'type-section' },
+  label:      { type: '32', label: '안내문 블록',  badge: 'type-label' },
+};
+
+// ── Connection ─────────────────────────────────────────────────────────────
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('connectBtn');
+  btn.disabled = true; btn.textContent = '연결 중...';
+  try {
+    const r = await post('/api/snow/connect', {
+      instance: document.getElementById('snowInst').value,
+      username: document.getElementById('snowUser').value,
+      password: document.getElementById('snowPass').value,
+    });
+    if (r.success) {
+      setBadge(true, r.user);
+      setMsg('connMsg', '✓ ' + (r.user || '연결 성공'), 'var(--green)');
+    } else {
+      setBadge(false);
+      setMsg('connMsg', '✗ ' + r.error, 'var(--red)');
+    }
+  } catch(e) { setMsg('connMsg', '✗ ' + e.message, 'var(--red)'); }
+  btn.disabled = false; btn.textContent = '연결 테스트';
+});
+
+// ── Add Field ──────────────────────────────────────────────────────────────
+function addField(type) {
+  const id = ++rowCounter;
+  const meta = SNOW_TYPES[type];
+  const el = document.createElement('div');
+  el.dataset.rowId = id;
+  el.dataset.rowType = type;
+
+  if (type === 'section') {
+    el.className = 'section-divider';
+    el.innerHTML = `
+      <span class="drag-handle" title="드래그로 순서 변경">⠿</span>
+      <span class="field-type-badge ${meta.badge}" style="flex-shrink:0">${meta.label}</span>
+      <input id="sec_label_${id}" placeholder="섹션 이름 입력..." value="">
+      <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;" onclick="removeRow(${id})">삭제</button>`;
+
+  } else if (type === 'label') {
+    el.className = 'guide-block-item';
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span class="drag-handle">⠿</span>
+        <span class="field-type-badge ${meta.badge}">${meta.label}</span>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;margin-left:auto;" onclick="removeRow(${id})">삭제</button>
+      </div>
+      <div class="guide-toolbar">
+        <button onmousedown="event.preventDefault();document.execCommand('bold')" title="굵게"><b>B</b></button>
+        <button onmousedown="event.preventDefault();document.execCommand('italic')" title="기울임"><i>I</i></button>
+        <button onmousedown="event.preventDefault();document.execCommand('underline')" title="밑줄"><u>U</u></button>
+        <button onmousedown="event.preventDefault();document.execCommand('insertUnorderedList')">• 목록</button>
+        <button onmousedown="event.preventDefault();document.execCommand('insertOrderedList')">1. 목록</button>
+        <select onchange="applyColor(this, ${id})" style="width:auto">
+          <option value="">글자색</option>
+          <option value="#e6edf3">기본</option>
+          <option value="#d29922">노란색</option>
+          <option value="#f85149">빨간색</option>
+          <option value="#3fb950">초록색</option>
+          <option value="#58a6ff">파란색</option>
+        </select>
+      </div>
+      <div id="guide_content_${id}" class="guide-content" contenteditable="true"
+           placeholder="안내 텍스트를 입력하세요..."></div>`;
+
+  } else {
+    el.className = 'field-row';
+    el.innerHTML = buildFieldHtml(id, type, meta);
+    // dropdown 타입 초기화
+    if (type === 'dropdown' || type === 'multiselect') {
+      setTimeout(() => initDropdownUI(id), 0);
+    }
+  }
+
+  // 빈 안내 placeholder 제거
+  const list = document.getElementById('fieldList');
+  const placeholder = list.querySelector('[style*="dashed"]');
+  if (placeholder) placeholder.remove();
+
+  list.appendChild(el);
+  attachDragEvents(el);
+  fieldRows.push({ id, type, el });
+  updatePreview();
+}
+
+function buildFieldHtml(id, type, meta) {
+  const isSysUserCols = SYS_USER_COLS.map(c => `<option value="${c}">${c}</option>`).join('');
+
+  let extraHtml = '';
+
+  if (type === 'dropdown' || type === 'multiselect') {
+    extraHtml = `
+      <div class="field-extra cols1" id="dropdown_extra_${id}">
+        <div>
+          <label class="lbl">드롭다운 유형</label>
+          <select id="dd_type_${id}" onchange="onDropdownTypeChange(${id})">
+            <option value="fixed">고정 값 (직접 입력)</option>
+            <option value="table">테이블 참조</option>
+          </select>
+        </div>
+        <div id="dd_fixed_${id}">
+          <label class="lbl" style="margin-top:10px;">옵션 목록</label>
+          <div id="options_${id}" class="options-list"></div>
+          <button class="btn btn-secondary" style="margin-top:8px;padding:7px 14px;font-size:13px;" onclick="addOption(${id})">+ 옵션 추가</button>
+        </div>
+        <div id="dd_table_${id}" style="display:none;">
+          <label class="lbl" style="margin-top:10px;">참조 테이블명</label>
+          <input id="dd_ref_table_${id}" placeholder="예: u_department_list">
+          <label class="lbl" style="margin-top:8px;">표시 필드</label>
+          <input id="dd_display_field_${id}" placeholder="예: name (기본값: name)">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <div>
+            <label class="lbl" style="margin-bottom:4px;">기본값</label>
+            <select id="dd_default_${id}" style="font-size:13px;padding:6px 10px;min-width:160px;">
+              <option value="">(없음)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;padding-top:20px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+              <input type="checkbox" id="mandatory_${id}" style="width:auto;"> 필수
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+              <input type="checkbox" id="readonly_${id}" style="width:auto;"> 읽기전용
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+              <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="onchange-toggle-btn" id="onchange_toggle_${id}" onclick="toggleOnchangePanel(${id})">
+            ⚡ onChange 규칙 설정
+          </button>
+        </div>
+        <div id="onchange_panel_${id}" style="display:none;" class="onchange-panel">
+          <div class="onchange-panel-header">
+            <b style="font-size:13px;color:var(--purple);">⚡ onChange 규칙</b>
+            <span style="font-size:12px;color:var(--sub);">이 필드 값이 바뀔 때 실행할 동작을 설정합니다</span>
+          </div>
+          <div id="onchange_rules_${id}"></div>
+          <button class="btn btn-purple" style="padding:7px 14px;font-size:13px;" onclick="addOnchangeRuleGroup(${id})">+ 조건 추가</button>
+        </div>
+      </div>`;
+  } else if (type === 'reference') {
+    extraHtml = `
+      <div class="field-extra">
+        <div>
+          <label class="lbl">참조 테이블명 *</label>
+          <input id="ref_table_${id}" placeholder="예: sys_user, sc_req_item">
+        </div>
+        <div>
+          <label class="lbl">Reference Qualifier <span style="font-size:11px;color:var(--sub);">(선택 — 목록 필터 조건)</span></label>
+          <input id="ref_qual_${id}" placeholder="예: requested_for=javascript:gs.getUserID()^stateNOT IN7,4">
+          <p style="font-size:11px;color:var(--sub);margin:3px 0 0;">ServiceNow encoded query 형식으로 입력. gs.getUserID() 같은 javascript: 표현식 사용 가능.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding-top:24px;">
+          <input type="checkbox" id="req_check_${id}" onchange="onRequesterChange(${id})" style="width:auto;">
+          <label for="req_check_${id}" style="font-size:14px;cursor:pointer;">신청자 정보로 자동채움</label>
+        </div>
+        <div id="req_col_wrap_${id}" style="display:none;grid-column:span 2;">
+          <label class="lbl">sys_user 컬럼 선택</label>
+          <select id="req_col_${id}">
+            <option value="">-- 컬럼 선택 --</option>
+            ${isSysUserCols}
+          </select>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;margin-top:8px;grid-column:span 2;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+          </label>
+        </div>
+      </div>`;
+  } else if (type === 'currency') {
+    extraHtml = `
+      <div class="field-extra cols3">
+        <div>
+          <label class="lbl">통화 종류</label>
+          <select id="currency_code_${id}">
+            <option value="KRW">KRW — 한국 원 (₩)</option>
+            <option value="USD">USD — 미국 달러 ($)</option>
+            <option value="EUR">EUR — 유로 (€)</option>
+            <option value="JPY">JPY — 일본 엔 (¥)</option>
+            <option value="GBP">GBP — 영국 파운드 (£)</option>
+            <option value="CNY">CNY — 중국 위안 (¥)</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Help Text (안내 문구)</label>
+          <input id="help_text_${id}" placeholder="예: 원 단위로 입력하세요">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;padding-top:24px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="mandatory_${id}" style="width:auto;"> 필수
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="readonly_${id}" style="width:auto;"> 읽기전용
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+          </label>
+        </div>
+      </div>`;
+  } else if (type === 'boolean') {
+    extraHtml = `
+      <div class="field-extra">
+        <div>
+          <label class="lbl">기본값</label>
+          <select id="bool_default_${id}">
+            <option value="">없음 (미체크)</option>
+            <option value="true">체크됨 (true)</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Help Text (안내 문구)</label>
+          <input id="help_text_${id}" placeholder="필드 아래 표시되는 설명">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;padding-top:24px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="mandatory_${id}" style="width:auto;"> 필수
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="readonly_${id}" style="width:auto;"> 읽기전용
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+          </label>
+        </div>
+        <div style="margin-top:10px;grid-column:span 2;">
+          <button class="onchange-toggle-btn" id="onchange_toggle_${id}" onclick="toggleOnchangePanel(${id})">
+            ⚡ onChange 규칙 설정
+          </button>
+        </div>
+        <div id="onchange_panel_${id}" style="display:none;grid-column:span 2;" class="onchange-panel">
+          <div class="onchange-panel-header">
+            <b style="font-size:13px;color:var(--purple);">⚡ onChange 규칙</b>
+            <span style="font-size:12px;color:var(--sub);">체크 상태가 바뀔 때 실행할 동작을 설정합니다</span>
+          </div>
+          <div id="onchange_rules_${id}"></div>
+          <button class="btn btn-purple" style="padding:7px 14px;font-size:13px;" onclick="addOnchangeRuleGroup(${id}, 'boolean')">+ 조건 추가</button>
+        </div>
+      </div>`;
+  } else if (type === 'macro') {
+    extraHtml = `
+      <div class="field-extra">
+        <div>
+          <label class="lbl">UI Macro 이름 <span style="color:var(--red);">*</span></label>
+          <input id="macro_name_${id}" placeholder="예: vacation_check_btn (sys_ui_macro.name)">
+          <p style="font-size:12px;color:var(--sub);margin-top:4px;">
+            ServiceNow에 미리 만들어진 UI Macro 이름을 입력하세요. 폼에 버튼으로 렌더링됩니다.
+          </p>
+        </div>
+        <div>
+          <label class="lbl">Help Text (안내 문구)</label>
+          <input id="help_text_${id}" placeholder="버튼에 대한 설명">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;padding-top:24px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+          </label>
+        </div>
+      </div>`;
+  } else if (['text','textarea','number','date','datetime','attachment'].includes(type)) {
+    extraHtml = `
+      <div class="field-extra">
+        <div style="display:flex;align-items:center;gap:10px;padding-top:24px;">
+          <input type="checkbox" id="req_check_${id}" onchange="onRequesterChange(${id})" style="width:auto;">
+          <label for="req_check_${id}" style="font-size:14px;cursor:pointer;">신청자 정보로 자동채움</label>
+        </div>
+        <div id="req_col_wrap_${id}" style="display:none;">
+          <label class="lbl">sys_user 컬럼 선택</label>
+          <select id="req_col_${id}">
+            <option value="">-- 컬럼 선택 --</option>
+            ${isSysUserCols}
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Help Text (안내 문구)</label>
+          <input id="help_text_${id}" placeholder="필드 아래 표시되는 설명">
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;padding-top:24px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="mandatory_${id}" style="width:auto;"> 필수
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="readonly_${id}" style="width:auto;"> 읽기전용
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+            <input type="checkbox" id="hidden_${id}" style="width:auto;"> 기본 숨김
+          </label>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="field-row-header">
+      <span class="drag-handle">⠿</span>
+      <span class="field-row-num">#${id}</span>
+      <span class="field-type-badge ${meta.badge}">${meta.label}</span>
+      <span id="req_badge_${id}" style="display:none;" class="chip-requester">신청자</span>
+      <span id="onchange_badge_${id}" style="display:none;" class="chip-onchange">onChange</span>
+      <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;margin-left:auto;" onclick="removeRow(${id})">삭제</button>
+    </div>
+    <div class="field-row-body grid2">
+      <div>
+        <label class="lbl">변수명 (name) *</label>
+        <input id="field_name_${id}" placeholder="예: requester_name (영문, 소문자, _)" oninput="updatePreview();refreshAllTargetSelects()">
+      </div>
+      <div>
+        <label class="lbl">레이블 (label) *</label>
+        <input id="field_label_${id}" placeholder="예: 신청자명" oninput="updatePreview();refreshAllTargetSelects()">
+      </div>
+    </div>
+    ${extraHtml}`;
+}
+
+function initDropdownUI(id) {
+  addOption(id);
+}
+
+function onDropdownTypeChange(id) {
+  const val = document.getElementById(`dd_type_${id}`)?.value;
+  const fixedEl = document.getElementById(`dd_fixed_${id}`);
+  const tableEl = document.getElementById(`dd_table_${id}`);
+  if (fixedEl) fixedEl.style.display = val === 'table' ? 'none' : 'block';
+  if (tableEl) tableEl.style.display = val === 'table' ? 'block' : 'none';
+}
+
+let optionCounter = 0;
+function addOption(fieldId) {
+  const oc = ++optionCounter;
+  const list = document.getElementById(`options_${fieldId}`);
+  if (!list) return;
+  const row = document.createElement('div');
+  row.className = 'option-row';
+  row.dataset.optId = oc;
+  row.innerHTML = `
+    <input placeholder="옵션 텍스트 (예: 결혼)" id="opt_label_${oc}" oninput="syncDefaultSelect(${fieldId})">
+    <input placeholder="값 (비우면 자동)" id="opt_value_${oc}" style="flex:0.7;" oninput="syncDefaultSelect(${fieldId})">
+    <button class="option-del" onclick="removeOption(${oc}, ${fieldId})">✕</button>`;
+  list.appendChild(row);
+  syncDefaultSelect(fieldId);
+}
+
+function removeOption(oc, fieldId) {
+  const list = document.getElementById(`options_${fieldId}`);
+  list?.querySelector(`[data-opt-id="${oc}"]`)?.remove();
+  syncDefaultSelect(fieldId);
+}
+
+// 기본값 select를 옵션 목록과 동기화
+function syncDefaultSelect(fieldId) {
+  const sel = document.getElementById(`dd_default_${fieldId}`);
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">(없음)</option>';
+  document.querySelectorAll(`#options_${fieldId} .option-row`).forEach(row => {
+    const oc = row.dataset.optId;
+    const lbl = document.getElementById(`opt_label_${oc}`)?.value?.trim();
+    const val = document.getElementById(`opt_value_${oc}`)?.value?.trim();
+    if (!lbl) return;
+    const v = val || lbl.toLowerCase().replace(/[^a-z0-9가-힣]/g, '_');
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = lbl;
+    sel.appendChild(opt);
+  });
+  sel.value = prev; // 이전 선택 유지 (없으면 자동으로 '' 선택됨)
+}
+
+function onRequesterChange(id) {
+  const checked = document.getElementById(`req_check_${id}`)?.checked;
+  const wrap = document.getElementById(`req_col_wrap_${id}`);
+  const badge = document.getElementById(`req_badge_${id}`);
+  const row = document.querySelector(`[data-row-id="${id}"]`);
+  if (wrap) wrap.style.display = checked ? 'block' : 'none';
+  if (badge) badge.style.display = checked ? 'inline-flex' : 'none';
+  if (row) row.classList.toggle('requester-row', checked);
+}
+
+function applyColor(sel, id) {
+  const el = document.getElementById(`guide_content_${id}`);
+  el?.focus();
+  document.execCommand('foreColor', false, sel.value || '#e6edf3');
+  sel.value = '';
+}
+
+// ── Drag & Drop (handle 방식) ───────────────────────────────────────────────
+let dragSrc = null;
+
+function attachDragEvents(el) {
+  const handle = el.querySelector('.drag-handle');
+  if (!handle) return;
+
+  // 핸들 누를 때만 row를 draggable로 활성화
+  handle.addEventListener('mousedown', () => { el.draggable = true; });
+  handle.addEventListener('mouseleave', () => { if (!dragSrc) el.draggable = false; });
+
+  el.addEventListener('dragstart', e => {
+    dragSrc = el;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ''); // Firefox 필수
+  });
+
+  el.addEventListener('dragend', () => {
+    el.draggable = false;
+    el.classList.remove('dragging');
+    document.querySelectorAll('#fieldList > [data-row-id]').forEach(r => r.classList.remove('drag-over'));
+    dragSrc = null;
+    updatePreview();
+  });
+
+  el.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragSrc && dragSrc !== el) el.classList.add('drag-over');
+  });
+
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    if (!dragSrc || dragSrc === el) return;
+
+    const list = document.getElementById('fieldList');
+    const children = [...list.children];
+    const srcIdx = children.indexOf(dragSrc);
+    const tgtIdx = children.indexOf(el);
+
+    if (srcIdx < tgtIdx) {
+      list.insertBefore(dragSrc, el.nextSibling);
+    } else {
+      list.insertBefore(dragSrc, el);
+    }
+  });
+}
+
+function removeRow(id) {
+  const el = document.querySelector(`[data-row-id="${id}"]`);
+  el?.remove();
+  fieldRows = fieldRows.filter(r => r.id !== id);
+  if (document.getElementById('fieldList').children.length === 0) {
+    document.getElementById('fieldList').innerHTML =
+      `<div style="text-align:center;padding:32px;color:var(--sub);font-size:14px;border:1px dashed var(--border);border-radius:10px;">위 버튼으로 필드를 추가하세요</div>`;
+  }
+  updatePreview();
+}
+
+// ── onChange Rules ──────────────────────────────────────────────────────────
+let ruleGroupCounter = 0;
+let actionCounter = 0;
+
+function toggleOnchangePanel(fieldId) {
+  const panel = document.getElementById(`onchange_panel_${fieldId}`);
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  // 패널 열 때마다 대상 필드 목록 갱신
+  if (!visible) refreshAllTargetSelects();
+}
+
+// 현재 구성된 필드 목록을 반환 (자기 자신 제외, section/label 제외)
+// fieldRows 전역 배열 + DOM 순서 기반으로 생성
+function getTargetFieldOptions(excludeFieldId) {
+  const opts = [];
+
+  // DOM 순서대로 정렬 (드래그 후 순서 변경 반영)
+  const listEl = document.getElementById('fieldList');
+  const orderedIds = [...listEl.children]
+    .filter(el => el.dataset && el.dataset.rowId)
+    .map(el => String(el.dataset.rowId));
+
+  orderedIds.forEach(rowId => {
+    const row = fieldRows.find(r => String(r.id) === rowId);
+    if (!row) return;
+    if (row.type === 'section' || row.type === 'label') return;
+
+    const name = document.getElementById(`field_name_${rowId}`)?.value?.trim() || '';
+    if (!name) return; // 이름 없는 필드는 대상 목록에서 제외
+    const label = document.getElementById(`field_label_${rowId}`)?.value?.trim() || '';
+    const typeLabel = SNOW_TYPES[row.type]?.label || row.type;
+    const text = label ? `${label} (${name}) [${typeLabel}]` : `${name} [${typeLabel}]`;
+    opts.push(`<option value="${name}">${text}</option>`);
+  });
+  return opts.join('');
+}
+
+// 조건 그룹 (triggerValue 하나에 여러 action) 추가
+function addOnchangeRuleGroup(fieldId, fieldType) {
+  const gid = ++ruleGroupCounter;
+  const container = document.getElementById(`onchange_rules_${fieldId}`);
+  if (!container) return;
+
+  // boolean이면 체크/미체크 select, 아니면 자유입력
+  const triggerInput = (fieldType === 'boolean')
+    ? `<select id="rg_val_${gid}" style="width:160px;padding:7px 10px;font-size:13px;">
+         <option value="true">체크됨 (true)</option>
+         <option value="false">미체크 (false)</option>
+       </select>`
+    : `<input id="rg_val_${gid}" placeholder="예: 결혼" style="width:160px;padding:7px 10px;font-size:13px;">`;
+
+  const div = document.createElement('div');
+  div.className = 'onchange-rule-group';
+  div.dataset.groupId = gid;
+  div.innerHTML = `
+    <div class="onchange-rule-group-header">
+      <span style="font-size:13px;font-weight:700;color:var(--sub);">조건:</span>
+      <span style="font-size:13px;color:var(--sub);">값이</span>
+      ${triggerInput}
+      <span style="font-size:13px;color:var(--sub);">일 때</span>
+      <button class="action-del-btn" style="margin-left:auto;" onclick="removeRuleGroup(${gid}, ${fieldId})">그룹 삭제</button>
+    </div>
+    <div class="onchange-action-hdr">
+      <span>대상 필드</span><span>표시</span><span>값 설정</span><span>필수</span><span></span>
+    </div>
+    <div id="rg_actions_${gid}" class="onchange-rule-actions"></div>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;margin-top:8px;"
+      onclick="addRuleAction(${gid}, ${fieldId})">+ 동작 추가</button>`;
+  container.appendChild(div);
+
+  // 첫 action 자동 추가
+  addRuleAction(gid, fieldId);
+  updateOnchangeBadge(fieldId);
+}
+
+function removeRuleGroup(gid, fieldId) {
+  document.querySelector(`[data-group-id="${gid}"]`)?.remove();
+  updateOnchangeBadge(fieldId);
+}
+
+// 동작 행 추가 — 대상필드 | 표시 | 값 | 필수 | 삭제
+function addRuleAction(gid, fieldId) {
+  const aid = ++actionCounter;
+  const actionsDiv = document.getElementById(`rg_actions_${gid}`);
+  if (!actionsDiv) return;
+
+  const row = document.createElement('div');
+  row.className = 'onchange-action-row';
+  row.dataset.actionId = aid;
+
+  row.innerHTML = `
+    <select id="act_target_${aid}" title="대상 필드 선택">
+      <option value="">-- 대상 필드 선택 --</option>
+      ${getTargetFieldOptions(fieldId)}
+    </select>
+    <select id="act_visibility_${aid}" title="표시 설정">
+      <option value="">-</option>
+      <option value="show">보이기</option>
+      <option value="hide">숨기기</option>
+    </select>
+    <input id="act_value_${aid}" placeholder="설정할 값 (선택)" style="font-size:13px;">
+    <select id="act_mandatory_${aid}" title="필수값 설정">
+      <option value="">-</option>
+      <option value="set">필수로 설정</option>
+      <option value="unset">필수 해제</option>
+    </select>
+    <button class="action-del-btn" onclick="removeAction(${aid})">삭제</button>`;
+
+  actionsDiv.appendChild(row);
+  // 이 행의 대상 select만 갱신 (다른 행의 선택값을 건드리지 않음)
+  const newSel = document.getElementById(`act_target_${aid}`);
+  if (newSel) {
+    newSel.innerHTML = `<option value="">-- 대상 필드 선택 --</option>` + getTargetFieldOptions(fieldId);
+  }
+}
+
+function removeAction(aid) {
+  document.querySelector(`[data-action-id="${aid}"]`)?.remove();
+}
+
+// ── Client Script 직접 추가 ─────────────────────────────────────────────────
+let csCounter = 0;
+
+// onChange 대상 필드 체크박스 목록 HTML 생성
+function getCsFieldChecklistHtml(cid, selectedFields = []) {
+  const listEl = document.getElementById('fieldList');
+  const orderedIds = [...(listEl?.children || [])]
+    .filter(el => el.dataset?.rowId)
+    .map(el => String(el.dataset.rowId));
+
+  let html = '';
+  let count = 0;
+  orderedIds.forEach(rowId => {
+    const row = fieldRows.find(r => String(r.id) === rowId);
+    if (!row || row.type === 'section' || row.type === 'label') return;
+    const name  = document.getElementById(`field_name_${rowId}`)?.value?.trim() || '';
+    const label = document.getElementById(`field_label_${rowId}`)?.value?.trim() || '';
+    if (!name) return;
+    const text    = label ? `${label} (${name})` : name;
+    const checked = selectedFields.includes(name) ? 'checked' : '';
+    html += `<label><input type="checkbox" value="${name}" ${checked}> ${text}</label>`;
+    count++;
+  });
+
+  if (!count) html = '<span style="font-size:12px;color:var(--sub);">필드를 먼저 추가하세요</span>';
+  return html;
+}
+
+function addClientScript(preset = {}) {
+  const cid = ++csCounter;
+  const row = document.createElement('div');
+  row.className = 'cs-row';
+  row.dataset.csId = cid;
+  row.innerHTML = `
+    <div class="cs-row-header">
+      <select id="cs_type_${cid}" style="padding:7px 12px;font-size:13px;font-weight:600;">
+        <option value="onLoad">onLoad</option>
+        <option value="onChange">onChange</option>
+        <option value="onSubmit">onSubmit</option>
+      </select>
+      <input id="cs_name_${cid}" placeholder="스크립트 이름 (예: onLoad_init)" style="flex:1;min-width:180px;padding:7px 12px;font-size:13px;">
+      <button class="action-del-btn" onclick="removeClientScript(${cid})">삭제</button>
+    </div>
+    <div id="cs_onChange_wrap_${cid}" style="display:none;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <label style="font-size:13px;font-weight:600;color:var(--sub);">적용 대상 필드 (체크한 필드에 onChange 적용)</label>
+        <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="refreshCsFieldList(${cid})">↻ 목록 갱신</button>
+      </div>
+      <div id="cs_field_list_${cid}" class="cs-field-checklist">
+        <span style="font-size:12px;color:var(--sub);">필드를 먼저 추가하세요</span>
+      </div>
+    </div>
+    <textarea id="cs_script_${cid}" spellcheck="false" placeholder="// 스크립트를 작성하세요
+// onLoad 예시:
+// function onLoad() {
+//   g_form.setVisible('field_name', false);
+// }
+
+// onChange 예시 (적용 대상 필드 선택 필요):
+// function onChange(control, oldValue, newValue, isLoading) {
+//   if (isLoading) return;
+//   g_form.setValue('other_field', newValue);
+// }"></textarea>
+  `;
+  document.getElementById('csList').appendChild(row);
+
+  const typeEl = document.getElementById(`cs_type_${cid}`);
+  typeEl.addEventListener('change', () => {
+    const t = typeEl.value;
+    const wrap = document.getElementById(`cs_onChange_wrap_${cid}`);
+    if (wrap) wrap.style.display = (t === 'onChange') ? 'block' : 'none';
+    if (t === 'onChange') refreshCsFieldList(cid);
+  });
+
+  // 프리셋 복원
+  if (preset.name)   setVal(`cs_name_${cid}`, preset.name);
+  if (preset.script) document.getElementById(`cs_script_${cid}`).value = preset.script;
+  if (preset.type) {
+    setVal(`cs_type_${cid}`, preset.type);
+    const wrap = document.getElementById(`cs_onChange_wrap_${cid}`);
+    if (preset.type === 'onChange') {
+      if (wrap) wrap.style.display = 'block';
+      // 체크박스는 dispatchEvent 없이 직접 렌더 — 저장된 fields를 유지
+      refreshCsFieldList(cid, preset.fields || []);
+    } else {
+      if (wrap) wrap.style.display = 'none';
+    }
+  }
+}
+
+function refreshCsFieldList(cid, selectedFields = []) {
+  const container = document.getElementById(`cs_field_list_${cid}`);
+  if (!container) return;
+  container.innerHTML = getCsFieldChecklistHtml(cid, selectedFields);
+}
+
+function removeClientScript(cid) {
+  document.querySelector(`[data-cs-id="${cid}"]`)?.remove();
+}
+
+function collectClientScripts() {
+  const result = [];
+  document.querySelectorAll('#csList .cs-row').forEach(row => {
+    const cid    = row.dataset.csId;
+    const type   = document.getElementById(`cs_type_${cid}`)?.value || 'onLoad';
+    const name   = document.getElementById(`cs_name_${cid}`)?.value?.trim();
+    const script = document.getElementById(`cs_script_${cid}`)?.value?.trim();
+
+    // onChange: 체크된 필드 목록 수집
+    const fields = [];
+    if (type === 'onChange') {
+      document.querySelectorAll(`#cs_field_list_${cid} input[type=checkbox]:checked`).forEach(cb => {
+        if (cb.value) fields.push(cb.value);
+      });
+    }
+
+    result.push({ type, name: name || `${type}_custom_${cid}`, fields, script: script || '' });
+  });
+  return result;
+}
+
+// onActionTypeChange — 이전 버전 호환용 (현재는 단일행 구조라 서브옵션 토글 불필요)
+function onActionTypeChange(aid, fieldId) {}
+
+// onChange 규칙 수집 공통 함수
+function collectOnchangeRules(fieldId) {
+  const rules = [];
+  document.querySelectorAll(`#onchange_rules_${fieldId} .onchange-rule-group`).forEach(grp => {
+    const gid = grp.dataset.groupId;
+    const triggerValue = document.getElementById(`rg_val_${gid}`)?.value?.trim();
+    if (!triggerValue) return;
+    const actions = [];
+    grp.querySelectorAll('.onchange-action-row').forEach(actRow => {
+      const aid = actRow.dataset.actionId;
+      const target = document.getElementById(`act_target_${aid}`)?.value;
+      if (!target) return;
+      actions.push({
+        target,
+        visibility: document.getElementById(`act_visibility_${aid}`)?.value || '',
+        value:      document.getElementById(`act_value_${aid}`)?.value?.trim() || '',
+        mandatory:  document.getElementById(`act_mandatory_${aid}`)?.value || '',
+      });
+    });
+    if (actions.length) rules.push({ triggerValue, actions });
+  });
+  return rules;
+}
+
+// 대상 필드 선택지 새로 고침 (이름 입력 시)
+function refreshAllTargetSelects() {
+  document.querySelectorAll('[id^="act_target_"]').forEach(sel => {
+    const ownerRow = sel.closest('[data-row-id]');
+    if (!ownerRow) return;
+    const fieldId = ownerRow.dataset.rowId;
+    const current = sel.value;
+    sel.innerHTML = `<option value="">-- 대상 필드 선택 --</option>` + getTargetFieldOptions(fieldId);
+    if (current) sel.value = current;
+  });
+}
+
+function updateOnchangeBadge(fieldId) {
+  const rulesDiv = document.getElementById(`onchange_rules_${fieldId}`);
+  const badge = document.getElementById(`onchange_badge_${fieldId}`);
+  const toggleBtn = document.getElementById(`onchange_toggle_${fieldId}`);
+  if (!rulesDiv || !badge) return;
+  const count = rulesDiv.querySelectorAll('.onchange-rule-group').length;
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+  badge.textContent = `onChange(${count})`;
+  if (toggleBtn) toggleBtn.classList.toggle('has-rules', count > 0);
+}
+
+// ── Collect Fields ─────────────────────────────────────────────────────────
+function collectFields() {
+  const fields = [];
+  const guideBlocks = [];
+
+  document.querySelectorAll('#fieldList > [data-row-id]').forEach(el => {
+    const id = el.dataset.rowId;
+    const type = el.dataset.rowType;
+
+    if (type === 'section') {
+      const label = document.getElementById(`sec_label_${id}`)?.value?.trim();
+      fields.push({ _type: 'section', name: `section_${id}`, label: label || `섹션 ${id}`, snowType: '11' });
+      return;
+    }
+
+    if (type === 'label') {
+      const html = document.getElementById(`guide_content_${id}`)?.innerHTML || '';
+      const text = document.getElementById(`guide_content_${id}`)?.textContent?.trim() || '';
+      fields.push({ _type: 'label', snowType: '32', name: `guide_${id}`, html, _order: fields.length });
+      return;
+    }
+
+    const meta = SNOW_TYPES[type];
+    const name = document.getElementById(`field_name_${id}`)?.value?.trim();
+    const label = document.getElementById(`field_label_${id}`)?.value?.trim();
+    if (!name || !label) return;
+
+    const field = {
+      name,
+      label,
+      _fieldType: type,
+      snowType: meta.type,
+      mandatory: document.getElementById(`mandatory_${id}`)?.checked || false,
+      readOnly:  document.getElementById(`readonly_${id}`)?.checked || false,
+      hidden:    document.getElementById(`hidden_${id}`)?.checked || false,
+      helpText: document.getElementById(`help_text_${id}`)?.value?.trim() || '',
+      isRequester: document.getElementById(`req_check_${id}`)?.checked || false,
+      requesterCol: document.getElementById(`req_col_${id}`)?.value || '',
+    };
+
+    if (type === 'reference') {
+      field.reference = document.getElementById(`ref_table_${id}`)?.value?.trim() || 'sys_user';
+      field.refQual   = document.getElementById(`ref_qual_${id}`)?.value?.trim() || '';
+      field.hidden    = document.getElementById(`hidden_${id}`)?.checked || false;
+    }
+
+    if (type === 'macro') {
+      field.macroName = document.getElementById(`macro_name_${id}`)?.value?.trim() || '';
+      field.hidden    = document.getElementById(`hidden_${id}`)?.checked || false;
+    }
+
+    if (type === 'currency') {
+      field.currencyCode = document.getElementById(`currency_code_${id}`)?.value || 'KRW';
+    }
+
+    if (type === 'boolean') {
+      field.boolDefault = document.getElementById(`bool_default_${id}`)?.value || '';
+      const onchangeRules = collectOnchangeRules(id);
+      if (onchangeRules.length) field.onchangeRules = onchangeRules;
+    }
+
+    if (type === 'dropdown' || type === 'multiselect') {
+      const ddType = document.getElementById(`dd_type_${id}`)?.value || 'fixed';
+      field.dropdownType = ddType;
+      field.ddDefault  = document.getElementById(`dd_default_${id}`)?.value || '';
+      field.mandatory  = document.getElementById(`mandatory_${id}`)?.checked || false;
+      field.readOnly   = document.getElementById(`readonly_${id}`)?.checked || false;
+      field.hidden     = document.getElementById(`hidden_${id}`)?.checked || false;
+      if (ddType === 'table') {
+        field.dropdownTable = document.getElementById(`dd_ref_table_${id}`)?.value?.trim();
+        field.dropdownDisplayField = document.getElementById(`dd_display_field_${id}`)?.value?.trim() || 'name';
+      } else {
+        const options = [];
+        document.querySelectorAll(`#options_${id} .option-row`).forEach(row => {
+          const oc = row.dataset.optId;
+          const lbl = document.getElementById(`opt_label_${oc}`)?.value?.trim();
+          const val = document.getElementById(`opt_value_${oc}`)?.value?.trim();
+          if (lbl) options.push({ label: lbl, value: val || lbl.toLowerCase().replace(/[^a-z0-9가-힣]/g, '_') });
+        });
+        field.options = options;
+      }
+
+      // onChange 규칙 수집
+      const onchangeRules = collectOnchangeRules(id);
+      if (onchangeRules.length) field.onchangeRules = onchangeRules;
+    }
+
+    fields.push(field);
+  });
+
+  return { fields, guideBlocks: fields.filter(f => f._type === 'label') };
+}
+
+// ── Preview ────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const { fields, guideBlocks } = collectFields();
+  const catName = document.getElementById('catName')?.value || '(이름 미입력)';
+  const total = fields.filter(f => f._type !== 'section').length;
+  const requesterCount = fields.filter(f => f.isRequester).length;
+  const sectionCount = fields.filter(f => f._type === 'section').length;
+
+  document.getElementById('previewBox').innerHTML =
+    `Catalog Item: <b style="color:var(--text)">${catName}</b> &nbsp;|&nbsp; ` +
+    `필드: <b style="color:var(--accent)">${total}개</b> &nbsp;|&nbsp; ` +
+    `섹션: <b style="color:var(--sub)">${sectionCount}개</b> &nbsp;|&nbsp; ` +
+    `신청자 자동채움: <b style="color:var(--green)">${requesterCount}개</b> &nbsp;|&nbsp; ` +
+    `안내문: <b style="color:var(--purple)">${guideBlocks.length}개</b>`;
+}
+
+document.getElementById('catName')?.addEventListener('input', updatePreview);
+
+// ── Draft (임시저장) ────────────────────────────────────────────────────────
+let currentDraftId = null; // 현재 불러온 draft id (덮어쓰기용)
+
+async function saveDraftUI() {
+  const name = document.getElementById('draftName').value.trim();
+  if (!name) { setMsg('draftMsg', '저장 이름을 입력하세요', 'var(--red)'); return; }
+
+  const catName = document.getElementById('catName').value.trim();
+  const catDesc = document.getElementById('catDesc').value.trim();
+  const { fields, guideBlocks } = collectFields();
+
+  try {
+    const r = await post('/api/drafts', {
+      id: currentDraftId || undefined,
+      name,
+      catalogName: catName,
+      catalogDescription: catDesc,
+      fields,
+      clientScripts: collectClientScripts(),
+      guideBlocks,
+    });
+    if (r.success) {
+      currentDraftId = r.id;
+      setMsg('draftMsg', `✓ 저장됨 (id:${r.id})`, 'var(--green)');
+      await loadDraftListUI();
+    } else {
+      setMsg('draftMsg', '저장 실패: ' + r.error, 'var(--red)');
+    }
+  } catch(e) { setMsg('draftMsg', e.message, 'var(--red)'); }
+}
+
+async function loadDraftListUI() {
+  try {
+    const r = await get('/api/drafts');
+    const wrap = document.getElementById('draftListWrap');
+    if (!r.drafts?.length) {
+      wrap.innerHTML = '<div class="draft-empty" style="margin-top:10px;">저장된 작업이 없습니다</div>';
+      return;
+    }
+    wrap.innerHTML = `<div class="draft-list">${r.drafts.map(d => `
+      <div class="draft-item">
+        <div class="draft-item-info">
+          <div class="draft-item-name">${escHtml(d.name)}</div>
+          <div class="draft-item-meta">${escHtml(d.cat_name || '이름 없음')} &nbsp;·&nbsp; 수정: ${d.updated_at}</div>
+        </div>
+        <button class="btn btn-primary" style="padding:6px 14px;font-size:13px;" onclick="loadDraftUI(${d.id})">불러오기</button>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;" onclick="deleteDraftUI(${d.id})">삭제</button>
+      </div>`).join('')}
+    </div>`;
+  } catch(e) { console.error(e); }
+}
+
+async function loadDraftUI(id) {
+  if (!confirm('현재 작업을 불러온 내용으로 교체합니다. 계속하시겠습니까?')) return;
+  try {
+    const r = await get(`/api/drafts/${id}`);
+    if (!r.success || !r.draft) return alert('불러오기 실패');
+    const d = r.draft;
+
+    // 기본 정보 적용
+    document.getElementById('catName').value = d.catalogName || '';
+    document.getElementById('catDesc').value = d.catalogDescription || '';
+    document.getElementById('draftName').value = d.name || '';
+    currentDraftId = d.id;
+
+    // 필드 목록 초기화 후 복원
+    document.getElementById('fieldList').innerHTML =
+      `<div style="text-align:center;padding:32px;color:var(--sub);font-size:14px;border:1px dashed var(--border);border-radius:10px;">위 버튼으로 필드를 추가하세요</div>`;
+    fieldRows = [];
+    rowCounter = 0;
+    ruleGroupCounter = 0;
+    actionCounter = 0;
+    optionCounter = 0;
+
+    // 필드 목록 초기화 후 복원 (label/guide 포함 fields 배열 순서 그대로)
+    // 1패스: 모든 필드 기본 정보 복원 (onchangeRules 제외)
+    for (const f of (d.fields || [])) {
+      restoreField(f, { skipOnchange: true });
+    }
+
+    // 2패스: 모든 필드가 DOM에 올라온 후 onchangeRules 복원
+    // (getTargetFieldOptions가 field_name_ 값을 읽으므로 이름이 채워진 후 실행 필요)
+    for (const f of (d.fields || [])) {
+      if (!f.onchangeRules?.length) continue;
+      // 해당 필드의 row id 찾기 (fieldRows 배열에서 이름으로 매칭)
+      const rowInfo = fieldRows.find(r => {
+        const nameEl = document.getElementById(`field_name_${r.id}`);
+        return nameEl && nameEl.value === f.name;
+      });
+      if (!rowInfo) continue;
+      const rid = rowInfo.id;
+
+      const panel = document.getElementById(`onchange_panel_${rid}`);
+      if (panel) panel.style.display = 'block';
+
+      for (const rule of f.onchangeRules) {
+        addOnchangeRuleGroup(rid, rowInfo.type === 'boolean' ? 'boolean' : undefined);
+        const groups = document.querySelectorAll(`#onchange_rules_${rid} .onchange-rule-group`);
+        const grp = groups[groups.length - 1];
+        if (!grp) continue;
+        const gid = grp.dataset.groupId;
+        setVal(`rg_val_${gid}`, rule.triggerValue || '');
+        for (let i = 0; i < rule.actions.length; i++) {
+          const act = rule.actions[i];
+          if (i > 0) addRuleAction(gid, rid);
+          const actionRows = grp.querySelectorAll('.onchange-action-row');
+          const actRow = actionRows[i];
+          if (!actRow) continue;
+          const aid = actRow.dataset.actionId;
+          restoreActionRow(aid, act, rid);
+        }
+        updateOnchangeBadge(rid);
+      }
+    }
+
+    // Client Script 복원
+    document.getElementById('csList').innerHTML = '';
+    csCounter = 0;
+    for (const cs of (d.clientScripts || [])) {
+      // 이전 버전 호환: field(단일) → fields(배열)
+      if (cs.field && !cs.fields) cs.fields = [cs.field];
+      addClientScript(cs);
+    }
+
+    updatePreview();
+    setMsg('draftMsg', `✓ 불러옴: ${escHtml(d.name)}`, 'var(--green)');
+  } catch(e) { alert(e.message); }
+}
+
+async function deleteDraftUI(id) {
+  if (!confirm('이 저장 항목을 삭제합니까?')) return;
+  try {
+    await fetch(`/api/drafts/${id}`, { method: 'DELETE' });
+    if (currentDraftId === id) { currentDraftId = null; }
+    await loadDraftListUI();
+    setMsg('draftMsg', '삭제됨', 'var(--sub)');
+  } catch(e) { alert(e.message); }
+}
+
+// 필드 복원: collectFields() 반대 방향으로 DOM 재구성
+
+// onChange action 행 복원 헬퍼 — 옵션을 먼저 채운 후 값 설정
+function restoreActionRow(aid, act, ownerFieldId) {
+  const targetSel = document.getElementById(`act_target_${aid}`);
+  if (targetSel) {
+    targetSel.innerHTML = `<option value="">-- 대상 필드 선택 --</option>` + getTargetFieldOptions(ownerFieldId);
+    targetSel.value = act.target || '';
+  }
+  if (act.visibility !== undefined) setVal(`act_visibility_${aid}`, act.visibility);
+  if (act.value !== undefined)      setVal(`act_value_${aid}`, act.value);
+  if (act.mandatory !== undefined)  setVal(`act_mandatory_${aid}`, act.mandatory);
+  // 이전 버전 호환 (actionType 기반)
+  if (act.actionType === 'setValue')        setVal(`act_value_${aid}`, act.value || '');
+  if (act.actionType === 'setVisibility')   setVal(`act_visibility_${aid}`, act.subOption || 'show');
+  if (act.actionType === 'setMandatory')    setVal(`act_mandatory_${aid}`, act.subOption || 'set');
+  if (act.actionType === 'setVisible')      setVal(`act_visibility_${aid}`, 'show');
+  if (act.actionType === 'setHidden')       setVal(`act_visibility_${aid}`, 'hide');
+  if (act.actionType === 'setNotMandatory') setVal(`act_mandatory_${aid}`, 'unset');
+}
+
+function restoreField(f, { skipOnchange = false } = {}) {
+  // label (_type === 'label') — 안내문 블록
+  if (f._type === 'label') {
+    addField('label');
+    const row = fieldRows[fieldRows.length - 1];
+    const el = document.getElementById(`guide_content_${row.id}`);
+    if (el) el.innerHTML = f.html || '';
+    return;
+  }
+
+  const type = f._fieldType || Object.keys(SNOW_TYPES).find(k => SNOW_TYPES[k].type === f.snowType) || 'text';
+
+  // section
+  if (type === 'section' || f._type === 'section') {
+    addField('section');
+    const row = fieldRows[fieldRows.length - 1];
+    const rid = row.id;
+    const inp = document.getElementById(`sec_label_${rid}`);
+    if (inp) inp.value = f.label || '';
+    return;
+  }
+
+  addField(type);
+  const row = fieldRows[fieldRows.length - 1];
+  const rid = row.id;
+
+  setVal(`field_name_${rid}`, f.name);
+  setVal(`field_label_${rid}`, f.label);
+  setVal(`help_text_${rid}`, f.helpText);
+  setChk(`mandatory_${rid}`, f.mandatory);
+  setChk(`readonly_${rid}`, f.readOnly);
+  setChk(`hidden_${rid}`, f.hidden);
+
+  if (f.isRequester) {
+    setChk(`req_check_${rid}`, true);
+    onRequesterChange(rid);
+    setVal(`req_col_${rid}`, f.requesterCol);
+  }
+
+  if (type === 'reference') {
+    setVal(`ref_table_${rid}`, f.reference);
+    setVal(`ref_qual_${rid}`, f.refQual || '');
+    setChk(`hidden_${rid}`, f.hidden);
+  }
+
+  if (type === 'macro') {
+    setVal(`macro_name_${rid}`, f.macroName || '');
+    setChk(`hidden_${rid}`, f.hidden);
+  }
+
+  if (type === 'currency') {
+    setVal(`currency_code_${rid}`, f.currencyCode || 'KRW');
+  }
+
+  if (type === 'boolean') {
+    setVal(`bool_default_${rid}`, f.boolDefault || '');
+
+    if (!skipOnchange && f.onchangeRules?.length) {
+      const panel = document.getElementById(`onchange_panel_${rid}`);
+      if (panel) panel.style.display = 'block';
+      for (const rule of f.onchangeRules) {
+        addOnchangeRuleGroup(rid, 'boolean');
+        const groups = document.querySelectorAll(`#onchange_rules_${rid} .onchange-rule-group`);
+        const grp = groups[groups.length - 1];
+        if (!grp) continue;
+        const gid = grp.dataset.groupId;
+        setVal(`rg_val_${gid}`, rule.triggerValue || '');
+        for (let i = 0; i < rule.actions.length; i++) {
+          const act = rule.actions[i];
+          if (i > 0) addRuleAction(gid, rid);
+          const actionRows = grp.querySelectorAll('.onchange-action-row');
+          const actRow = actionRows[i];
+          if (!actRow) continue;
+          const aid = actRow.dataset.actionId;
+          restoreActionRow(aid, act, rid);
+        }
+        updateOnchangeBadge(rid);
+      }
+    }
+  }
+
+  if (type === 'dropdown' || type === 'multiselect') {
+    setVal(`dd_type_${rid}`, f.dropdownType || 'fixed');
+    onDropdownTypeChange(rid);
+    setChk(`mandatory_${rid}`, f.mandatory);
+    setChk(`readonly_${rid}`, f.readOnly);
+    setChk(`hidden_${rid}`, f.hidden);
+
+    if (f.dropdownType === 'table') {
+      setVal(`dd_ref_table_${rid}`, f.dropdownTable || '');
+      setVal(`dd_display_field_${rid}`, f.dropdownDisplayField || '');
+    } else {
+      // 기존 빈 옵션 지우고 새로 추가
+      const optList = document.getElementById(`options_${rid}`);
+      if (optList) optList.innerHTML = '';
+      for (const opt of (f.options || [])) {
+        const oc = ++optionCounter;
+        const li = document.createElement('div');
+        li.className = 'option-row';
+        li.dataset.optId = oc;
+        li.innerHTML = `
+          <input placeholder="옵션 텍스트" id="opt_label_${oc}" value="${escHtml(opt.label || '')}" oninput="syncDefaultSelect(${rid})">
+          <input placeholder="값" id="opt_value_${oc}" style="flex:0.7;" value="${escHtml(opt.value || '')}" oninput="syncDefaultSelect(${rid})">
+          <button class="option-del" onclick="removeOption(${oc}, ${rid})">✕</button>`;
+        optList?.appendChild(li);
+      }
+      // 기본값 select 동기화 후 복원
+      syncDefaultSelect(rid);
+      setVal(`dd_default_${rid}`, f.ddDefault || '');
+    }
+    if (!skipOnchange && f.onchangeRules?.length) {
+      const panel = document.getElementById(`onchange_panel_${rid}`);
+      if (panel) panel.style.display = 'block';
+      for (const rule of f.onchangeRules) {
+        addOnchangeRuleGroup(rid);
+        const groups = document.querySelectorAll(`#onchange_rules_${rid} .onchange-rule-group`);
+        const grp = groups[groups.length - 1];
+        if (!grp) continue;
+        const gid = grp.dataset.groupId;
+        setVal(`rg_val_${gid}`, rule.triggerValue || '');
+
+        // 첫 번째 action은 이미 자동 추가되어 있으므로 덮어쓰기
+        const existingActions = grp.querySelectorAll('.onchange-action-row');
+        for (let i = 0; i < rule.actions.length; i++) {
+          const act = rule.actions[i];
+          if (i > 0) addRuleAction(gid, rid);
+          const actionRows = grp.querySelectorAll('.onchange-action-row');
+          const actRow = actionRows[i];
+          if (!actRow) continue;
+          const aid = actRow.dataset.actionId;
+          restoreActionRow(aid, act, rid);
+        }
+        updateOnchangeBadge(rid);
+      }
+    }
+  }
+}
+
+function restoreGuide(g) {
+  addField('label');
+  const row = fieldRows[fieldRows.length - 1];
+  const el = document.getElementById(`guide_content_${row.id}`);
+  if (el) el.innerHTML = g.html || '';
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el && val !== undefined && val !== null) el.value = val;
+}
+function setChk(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.checked = !!val;
+}
+// multiple select에 배열로 선택값 복원
+function setMultiSel(id, vals) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const arr = Array.isArray(vals) ? vals : (vals ? [vals] : []);
+  [...el.options].forEach(opt => { opt.selected = arr.includes(opt.value); });
+}
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// 초기 목록 로드
+loadDraftListUI();
+
+// ── API Preview ────────────────────────────────────────────────────────────
+document.getElementById('apiPreviewBtn').addEventListener('click', async () => {
+  const catName = document.getElementById('catName').value.trim();
+  if (!catName) return alert('Catalog Item 이름을 먼저 입력하세요');
+
+  const { fields } = collectFields();
+  if (!fields.length) return alert('필드를 하나 이상 추가하세요');
+
+  const payload = {
+    catalogName: catName,
+    catalogDescription: document.getElementById('catDesc').value.trim(),
+    fields,
+    clientScripts: collectClientScripts(),
+  };
+
+  const steps = buildApiSteps(payload);
+  renderApiPreview(steps);
+  document.getElementById('apiPreviewModal').style.display = 'block';
+});
+
+function buildApiSteps({ catalogName, catalogDescription, fields, clientScripts }) {
+  const CURRENCY_SYMBOLS = { KRW: '₩', USD: '$', EUR: '€', JPY: '¥', GBP: '£', CNY: '¥' };
+  const steps = [];
+  let order = 100;
+
+  // 1. Catalog Item
+  steps.push({
+    step: '1. Catalog Item 생성',
+    table: 'sc_cat_item',
+    method: 'POST',
+    note: '응답 result.sys_id → CAT_ITEM_ID',
+    body: { name: catalogName, short_description: catalogDescription || catalogName, description: catalogDescription || catalogName, active: true, use_sc_layout: true, no_quantity: true },
+  });
+
+  // 2. Variables
+  for (const field of fields) {
+    if (field._type === 'section') {
+      steps.push({ step: `섹션: ${field.label}`, table: 'item_option_new', method: 'POST', body: { cat_item: '$CAT_ITEM_ID', name: field.name, question_text: field.label || '', type: '11', order: String(order), active: true } });
+      order += 100; continue;
+    }
+    if (field._type === 'label') {
+      steps.push({ step: `안내문 블록: ${field.name}`, table: 'item_option_new', method: 'POST', body: { cat_item: '$CAT_ITEM_ID', name: field.name, question_text: field.html || '', type: '32', order: String(order), active: true } });
+      order += 100; continue;
+    }
+
+    const body = {
+      cat_item: '$CAT_ITEM_ID',
+      name: field.name,
+      question_text: field.label || field.name,
+      type: field.snowType,
+      order: String(order),
+      active: true,
+      mandatory: field.mandatory || false,
+    };
+    if (field.readOnly) body.read_only = true;
+    if (field.helpText) body.help_text = field.helpText;
+    if (field.snowType === '8' || field._fieldType === 'reference') {
+      body.type = '8';
+      body.reference = (field.reference || 'sys_user');
+      if (field.refQual) body.reference_qual = field.refQual;
+    }
+    if (field._fieldType === 'macro' || field.macroName) {
+      body.type = '15';  // UI Page (Macro)
+      body.macro = '<UI_MACRO_SYS_ID>';
+    }
+    if ((field.snowType === '5' || field.snowType === '21') && field.ddDefault) body.default_value = field.ddDefault;
+    if ((field.snowType === '28' || field.snowType === '3') && field.boolDefault === 'true') body.default_value = 'true';
+    if (field.currencyCode) {
+      const sym = CURRENCY_SYMBOLS[field.currencyCode] || field.currencyCode;
+      body.question_text = `${field.label || field.name} (${field.currencyCode} ${sym})`;
+      body.help_text = body.help_text || `숫자만 입력하세요. 통화: ${field.currencyCode} ${sym}`;
+    }
+    if (field.snowType === '5' && field.dropdownType === 'table' && field.dropdownTable) {
+      body.type = '18';  // Lookup Select Box
+      body.lookup_table = field.dropdownTable;
+      body.lookup_value = field.dropdownDisplayField || 'name';
+    }
+
+    const varKey = `$VAR_${field.name.toUpperCase()}`;
+    steps.push({
+      step: `Variable: ${field.label || field.name} (${field._fieldType}, type=${body.type})`,
+      table: 'item_option_new', method: 'POST',
+      note: `응답 result.sys_id → VAR_${field.name.toUpperCase()}`,
+      body,
+    });
+
+    // 드롭다운 고정 옵션
+    if (field.snowType === '5' && field.dropdownType !== 'table' && field.options?.length) {
+      field.options.forEach((opt, i) => {
+        steps.push({
+          step: `  └ 드롭다운 옵션: "${opt.label}"`,
+          table: 'question_choice', method: 'POST',
+          body: { question: varKey, text: String(opt.label || opt), value: String(opt.value || opt).toLowerCase().replace(/[^a-z0-9가-힣]/g, '_'), order: String((i + 1) * 100) },
+        });
+      });
+    }
+    order += 100;
+  }
+
+  // 3. onLoad Client Script
+  const onLoadLines = [];
+  for (const f of fields) {
+    if (f.isRequester && f.requesterCol) onLoadLines.push(`  g_form.setValue('${f.name}', currentUser.getValue('${f.requesterCol}'));`);
+    if (f.hidden) onLoadLines.push(`  g_form.setVisible('${f.name}', false);`);
+  }
+  if (onLoadLines.length) {
+    const hasReq = onLoadLines.some(l => l.includes('setValue'));
+    const lines = ['function onLoad() {'];
+    if (hasReq) lines.push(`  var gr = new GlideRecord('sys_user');\n  gr.get(g_user.userID);\n  var currentUser = gr;\n`);
+    lines.push(...onLoadLines, '}');
+    steps.push({ step: 'onLoad Client Script (신청자 자동채움 / 기본 숨김)', table: 'catalog_script_client', method: 'POST', body: { sys_class_name: 'catalog_script_client', name: 'onLoad_RequesterAutoFill', type: 'onLoad', cat_item: '$CAT_ITEM_ID', script: lines.join('\n'), active: true } });
+  }
+
+  // 4. onChange Client Scripts (드롭다운 규칙)
+  for (const f of fields) {
+    if (!f.onchangeRules?.length) continue;
+    const lines = [`function onChange(control, oldValue, newValue, isLoading) {`, `  if (isLoading) return;`, ``];
+    for (const rule of f.onchangeRules) {
+      const condVal = String(rule.triggerValue || '').replace(/'/g, "\\'");
+      lines.push(`  if (newValue == '${condVal}') {`);
+      for (const act of rule.actions) {
+        const t = act.target; if (!t) continue;
+        if (act.visibility === 'show') lines.push(`    g_form.setVisible('${t}', true);`);
+        else if (act.visibility === 'hide') lines.push(`    g_form.setVisible('${t}', false);`);
+        if (act.value !== '' && act.value !== undefined && act.value !== null) lines.push(`    g_form.setValue('${t}', '${String(act.value).replace(/'/g, "\\'")}');`);
+        if (act.mandatory === 'set') lines.push(`    g_form.setMandatory('${t}', true);`);
+        else if (act.mandatory === 'unset') lines.push(`    g_form.setMandatory('${t}', false);`);
+      }
+      lines.push(`  }`);
+    }
+    lines.push('}');
+    steps.push({ step: `onChange Client Script: ${f.name} (${f.onchangeRules.length}개 규칙)`, table: 'catalog_script_client', method: 'POST', body: { sys_class_name: 'catalog_script_client', name: `onChange_${f.name}`, type: 'onChange', cat_item: '$CAT_ITEM_ID', variable_name: f.name, cat_variable: `$VAR_${f.name.toUpperCase()}`, script: lines.join('\n'), active: true } });
+  }
+
+  // 5. Currency 검증 onChange
+  for (const f of fields) {
+    if (!f.currencyCode) continue;
+    const sym = CURRENCY_SYMBOLS[f.currencyCode] || f.currencyCode;
+    const isDecimal = !['KRW', 'JPY'].includes(f.currencyCode);
+    const script = [`function onChange(control, oldValue, newValue, isLoading) {`, `  if (isLoading || newValue === '' || newValue === null) return;`, `  var pattern = ${isDecimal ? '/^\\d+(\\.\\d{1,2})?$/' : '/^\\d+$/'}; `, `  if (!pattern.test(newValue)) {`, `    g_form.showFieldMsg('${f.name}', '숫자만 입력하세요 [${f.currencyCode} ${sym}]', 'error');`, `    g_form.setValue('${f.name}', oldValue);`, `  } else { g_form.hideFieldMsg('${f.name}'); }`, `}`].join('\n');
+    steps.push({ step: `통화 검증 onChange: ${f.name} (${f.currencyCode})`, table: 'catalog_script_client', method: 'POST', body: { sys_class_name: 'catalog_script_client', name: `onChange_currency_${f.name}`, type: 'onChange', cat_item: '$CAT_ITEM_ID', variable_name: f.name, cat_variable: `$VAR_${f.name.toUpperCase()}`, script, active: true } });
+  }
+
+  // 6. 직접 입력 Client Scripts
+  for (const cs of (clientScripts || [])) {
+    if (!cs.script) continue;
+    const targets = (cs.type === 'onChange' && cs.fields?.length) ? cs.fields : [null];
+    for (const applyField of targets) {
+      const body = { sys_class_name: 'catalog_script_client', name: `${cs.name || 'customScript'}${applyField ? `_${applyField}` : ''}`, type: cs.type || 'onLoad', cat_item: '$CAT_ITEM_ID', script: cs.script, active: true };
+      if (cs.type === 'onChange' && applyField) { body.variable_name = applyField; body.cat_variable = `$VAR_${applyField.toUpperCase()}`; }
+      steps.push({ step: `직접 입력 Client Script: ${body.name}`, table: 'catalog_script_client', method: 'POST', body });
+    }
+  }
+
+  return steps;
+}
+
+function renderApiPreview(steps) {
+  const list = document.getElementById('apiPreviewList');
+  list.innerHTML = steps.map((s, i) => {
+    const bodyStr = JSON.stringify(s.body, null, 2);
+    const isScript = s.body?.script;
+    return `
+    <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <div style="background:var(--bg);padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:700;background:${s.table==='sc_cat_item'?'var(--green)':s.table==='catalog_script_client'?'#7c4dff':'var(--primary)'};color:#fff;padding:2px 8px;border-radius:4px;">${s.method}</span>
+          <span style="font-size:12px;font-family:monospace;color:var(--sub);">/api/now/table/${s.table}</span>
+          <span style="font-size:13px;font-weight:600;">${escHtml(s.step)}</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          ${s.note ? `<span style="font-size:11px;color:var(--green);white-space:nowrap;">${escHtml(s.note)}</span>` : ''}
+          <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="copyStep(${i})">복사</button>
+          <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="toggleStep(${i})">펼치기</button>
+        </div>
+      </div>
+      <div id="step_body_${i}" style="display:none;padding:12px 14px;">
+        <pre style="font-size:12px;font-family:monospace;overflow-x:auto;margin:0;white-space:pre-wrap;word-break:break-all;background:var(--bg);padding:10px;border-radius:6px;">${escHtml(bodyStr)}</pre>
+        ${isScript ? `<details style="margin-top:8px;"><summary style="font-size:12px;color:var(--sub);cursor:pointer;">스크립트 내용 보기</summary><pre style="font-size:12px;font-family:monospace;margin:6px 0 0;background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;">${escHtml(s.body.script)}</pre></details>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  // 전체 복사용으로 steps 저장
+  window._apiPreviewSteps = steps;
+}
+
+function toggleStep(i) {
+  const el = document.getElementById(`step_body_${i}`);
+  const btn = el.previousElementSibling.querySelector('button:last-child');
+  if (el.style.display === 'none') { el.style.display = 'block'; btn.textContent = '접기'; }
+  else { el.style.display = 'none'; btn.textContent = '펼치기'; }
+}
+
+function copyStep(i) {
+  const s = window._apiPreviewSteps?.[i];
+  if (!s) return;
+  const url = `/api/now/table/${s.table}`;
+  const text = `# ${s.step}\nPOST ${url}\n${JSON.stringify(s.body, null, 2)}`;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copyMsg').textContent = `✓ ${i+1}번 복사됨`;
+    setTimeout(() => document.getElementById('copyMsg').textContent = '', 2000);
+  });
+}
+
+function copyAllCurls() {
+  const steps = window._apiPreviewSteps;
+  if (!steps) return;
+  const text = steps.map((s, i) => {
+    const url = `/api/now/table/${s.table}`;
+    return `# Step ${i+1}: ${s.step}\nPOST ${url}\n${JSON.stringify(s.body, null, 2)}`;
+  }).join('\n\n---\n\n');
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copyMsg').textContent = `✓ 전체 ${steps.length}개 복사됨`;
+    setTimeout(() => document.getElementById('copyMsg').textContent = '', 3000);
+  });
+}
+
+// ── Create ─────────────────────────────────────────────────────────────────
+document.getElementById('createBtn').addEventListener('click', async () => {
+  const catName = document.getElementById('catName').value.trim();
+  if (!catName) return alert('Catalog Item 이름을 입력하세요');
+
+  const { fields, guideBlocks } = collectFields();
+  if (!fields.length) return alert('필드를 하나 이상 추가하세요');
+
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+
+  document.getElementById('progressDiv').classList.remove('hidden');
+  document.getElementById('logsDiv').classList.remove('hidden');
+  document.getElementById('resultDiv').classList.add('hidden');
+  document.getElementById('logsEl').innerHTML = '';
+
+  try {
+    const r = await post('/api/snow/create-manual', {
+      catalogName: catName,
+      catalogDescription: document.getElementById('catDesc').value.trim(),
+      fields,
+      guideBlocks,
+      clientScripts: collectClientScripts(),
+    });
+
+    if (r.success) {
+      const logs = r.result.logs || [];
+      logs.forEach((log, idx) => {
+        setTimeout(() => {
+          const d = document.createElement('div');
+          d.className = `log-${log.type === 'success' ? 's' : log.type === 'error' ? 'e' : 'i'}`;
+          d.textContent = `[${log.time}] ${log.message}`;
+          document.getElementById('logsEl').appendChild(d);
+          document.getElementById('logsEl').scrollTop = 9999;
+          document.getElementById('progressFill').style.width = ((idx + 1) / logs.length * 100) + '%';
+        }, idx * 80);
+      });
+      setTimeout(() => {
+        document.getElementById('resultDiv').classList.remove('hidden');
+        document.getElementById('resultLink').href = r.result.catalogItemUrl;
+      }, logs.length * 80 + 400);
+    } else {
+      alert('생성 실패: ' + (r.error || r.result?.error || JSON.stringify(r)));
+    }
+  } catch(e) { alert('오류: ' + e.message); }
+
+  btn.disabled = false; btn.textContent = 'ServiceNow에 생성하기';
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+async function post(url, data) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return r.json();
+}
+
+async function get(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+
+function setBadge(on, user) {
+  const el = document.getElementById('connBadge');
+  el.className = 'conn-badge ' + (on ? 'on' : 'off');
+  el.textContent = on ? `✓ ${user || 'Connected'}` : '연결 안됨';
+}
+
+function setMsg(id, text, color) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.style.color = color;
+}
+</script>
+</body>
+</html>
