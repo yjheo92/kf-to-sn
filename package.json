@@ -21,7 +21,8 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "jszip": "^3.10.1",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2"

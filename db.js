@@ -1,27 +1,29 @@
 /**
  * db.js — 듀얼 DB 모듈
  *   - 로컬 개발: @libsql/client/node (SQLite file)
- *   - Vercel 배포: @neondatabase/serverless (Neon/Supabase Postgres)
+ *   - Vercel/Supabase 배포: postgres (node-postgres compatible)
  *
  * DATABASE_URL 또는 POSTGRES_URL 환경변수가 있으면 Postgres 사용,
  * 없으면 로컬 SQLite 사용.
- *
- * initDb() 는 서버 시작 시 1회 호출:
- *   1. 테이블이 없으면 생성
- *   2. Postgres 환경이고 로컬 SQLite 파일이 존재하면 데이터 마이그레이션
  */
 
 const path = require('path');
 const fs   = require('fs');
 
-const USE_POSTGRES = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+const CONNECTION_STRING = process.env.DATABASE_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL;
+const USE_POSTGRES = !!CONNECTION_STRING;
 const SQLITE_PATH  = path.join(__dirname, 'data', 'drafts.db');
 
-// ── Neon/Supabase Postgres ─────────────────────────────────────
-let sql;
+// ── Postgres (postgres 드라이버) ───────────────────────────────
+let pgSql;
 if (USE_POSTGRES) {
-  const { neon } = require('@neondatabase/serverless');
-  sql = neon(process.env.DATABASE_URL || process.env.POSTGRES_URL);
+  const postgres = require('postgres');
+  pgSql = postgres(CONNECTION_STRING, {
+    ssl: 'require',
+    max: 1,          // 서버리스 환경에서 연결 수 제한
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
 }
 
 // ── Local SQLite (libsql) ──────────────────────────────────────
@@ -33,22 +35,10 @@ if (!USE_POSTGRES) {
   sqliteDb = createClient({ url: `file:${SQLITE_PATH}` });
 }
 
-// ── SQLite 파일에서 직접 읽기 (마이그레이션 전용) ────────────────
-function readSqliteFile() {
-  try {
-    // better-sqlite3 없이 libsql로 읽기
-    const { createClient } = require('@libsql/client/node');
-    const client = createClient({ url: `file:${SQLITE_PATH}` });
-    return client;
-  } catch {
-    return null;
-  }
-}
-
 // ── 테이블 생성 ───────────────────────────────────────────────
 async function createTables() {
   if (USE_POSTGRES) {
-    await sql`
+    await pgSql`
       CREATE TABLE IF NOT EXISTS drafts (
         id         SERIAL PRIMARY KEY,
         name       TEXT NOT NULL,
@@ -59,8 +49,7 @@ async function createTables() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `;
-    // 마이그레이션 완료 여부 추적 테이블
-    await sql`
+    await pgSql`
       CREATE TABLE IF NOT EXISTS _migrations (
         key        TEXT PRIMARY KEY,
         applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -86,8 +75,7 @@ async function migrateFromSqlite() {
   if (!USE_POSTGRES) return;
   if (!fs.existsSync(SQLITE_PATH)) return;
 
-  // 이미 마이그레이션했으면 스킵
-  const done = await sql`SELECT key FROM _migrations WHERE key='sqlite_initial'`;
+  const done = await pgSql`SELECT key FROM _migrations WHERE key='sqlite_initial'`;
   if (done.length > 0) {
     console.log('[DB] SQLite 마이그레이션 이미 완료 — 스킵');
     return;
@@ -110,29 +98,25 @@ async function migrateFromSqlite() {
     rows = result.rows;
   } catch (e) {
     console.warn('[DB] drafts 테이블 없음 — 마이그레이션 스킵:', e.message);
-    await sql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
+    await pgSql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
     return;
   }
 
   if (rows.length === 0) {
-    console.log('[DB] SQLite에 데이터 없음 — 마이그레이션 완료로 표시');
-    await sql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
+    console.log('[DB] SQLite에 데이터 없음 — 완료 표시');
+    await pgSql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
     return;
   }
 
   let migrated = 0;
   for (const row of rows) {
     try {
-      await sql`
+      const createdAt = row.created_at ? new Date(row.created_at) : new Date();
+      const updatedAt = row.updated_at ? new Date(row.updated_at) : new Date();
+      await pgSql`
         INSERT INTO drafts (name, cat_name, cat_desc, payload, created_at, updated_at)
-        VALUES (
-          ${row.name},
-          ${row.cat_name || ''},
-          ${row.cat_desc || ''},
-          ${row.payload},
-          ${row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString()},
-          ${row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString()}
-        )
+        VALUES (${row.name}, ${row.cat_name || ''}, ${row.cat_desc || ''}, ${row.payload},
+                ${createdAt}, ${updatedAt})
         ON CONFLICT DO NOTHING
       `;
       migrated++;
@@ -141,14 +125,12 @@ async function migrateFromSqlite() {
     }
   }
 
-  // 완료 표시
-  await sql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
+  await pgSql`INSERT INTO _migrations (key) VALUES ('sqlite_initial')`;
 
-  // 마이그레이션 완료된 SQLite 파일 백업
   const backupPath = SQLITE_PATH + '.migrated';
   try {
     fs.renameSync(SQLITE_PATH, backupPath);
-    console.log(`[DB] ✓ ${migrated}/${rows.length}개 마이그레이션 완료 → SQLite 백업: ${backupPath}`);
+    console.log(`[DB] ✓ ${migrated}/${rows.length}개 마이그레이션 완료 → 백업: ${backupPath}`);
   } catch {
     console.log(`[DB] ✓ ${migrated}/${rows.length}개 마이그레이션 완료`);
   }
@@ -169,7 +151,7 @@ async function saveDraft({ id, name, catalogName, catalogDescription, fields, cl
 
   if (id) {
     if (USE_POSTGRES) {
-      await sql`
+      await pgSql`
         UPDATE drafts SET name=${name}, cat_name=${catName}, cat_desc=${catDesc},
         payload=${payload}, updated_at=NOW() WHERE id=${Number(id)}
       `;
@@ -183,7 +165,7 @@ async function saveDraft({ id, name, catalogName, catalogDescription, fields, cl
     return { id: Number(id), updated: true };
   } else {
     if (USE_POSTGRES) {
-      const rows = await sql`
+      const rows = await pgSql`
         INSERT INTO drafts (name, cat_name, cat_desc, payload)
         VALUES (${name}, ${catName}, ${catDesc}, ${payload})
         RETURNING id
@@ -203,8 +185,8 @@ async function saveDraft({ id, name, catalogName, catalogDescription, fields, cl
 // ── 목록 반환 ─────────────────────────────────────────────────
 async function listDrafts() {
   if (USE_POSTGRES) {
-    return sql`SELECT id, name, cat_name, cat_desc, created_at, updated_at
-               FROM drafts ORDER BY updated_at DESC`;
+    return pgSql`SELECT id, name, cat_name, cat_desc, created_at, updated_at
+                 FROM drafts ORDER BY updated_at DESC`;
   } else {
     const result = await sqliteDb.execute(
       `SELECT id, name, cat_name, cat_desc, created_at, updated_at FROM drafts ORDER BY updated_at DESC`
@@ -217,7 +199,7 @@ async function listDrafts() {
 async function getDraft(id) {
   let row;
   if (USE_POSTGRES) {
-    const rows = await sql`SELECT * FROM drafts WHERE id=${Number(id)}`;
+    const rows = await pgSql`SELECT * FROM drafts WHERE id=${Number(id)}`;
     row = rows[0];
   } else {
     const result = await sqliteDb.execute({ sql: `SELECT * FROM drafts WHERE id=?`, args: [Number(id)] });
@@ -240,7 +222,7 @@ async function getDraft(id) {
 // ── 삭제 ──────────────────────────────────────────────────────
 async function deleteDraft(id) {
   if (USE_POSTGRES) {
-    const rows = await sql`DELETE FROM drafts WHERE id=${Number(id)} RETURNING id`;
+    const rows = await pgSql`DELETE FROM drafts WHERE id=${Number(id)} RETURNING id`;
     return rows.length > 0;
   } else {
     const result = await sqliteDb.execute({ sql: `DELETE FROM drafts WHERE id=?`, args: [Number(id)] });
@@ -251,8 +233,8 @@ async function deleteDraft(id) {
 // ── DB 어드민: 테이블 목록 ────────────────────────────────────
 async function adminGetTables() {
   if (USE_POSTGRES) {
-    return sql`SELECT table_name AS name FROM information_schema.tables
-               WHERE table_schema='public' ORDER BY table_name`;
+    return pgSql`SELECT table_name AS name FROM information_schema.tables
+                 WHERE table_schema='public' ORDER BY table_name`;
   } else {
     const result = await sqliteDb.execute(`SELECT name FROM sqlite_master WHERE type='table' ORDER BY name`);
     return result.rows;
@@ -262,12 +244,11 @@ async function adminGetTables() {
 // ── DB 어드민: 테이블 전체 행 ─────────────────────────────────
 async function adminGetRows(table) {
   if (USE_POSTGRES) {
-    const check = await sql`SELECT table_name FROM information_schema.tables
-                             WHERE table_schema='public' AND table_name=${table}`;
+    const check = await pgSql`SELECT table_name FROM information_schema.tables
+                               WHERE table_schema='public' AND table_name=${table}`;
     if (!check[0]) throw new Error('존재하지 않는 테이블입니다');
-    const { neon } = require('@neondatabase/serverless');
-    const rawSql = neon(process.env.DATABASE_URL || process.env.POSTGRES_URL);
-    return rawSql(`SELECT * FROM "${table}" LIMIT 500`);
+    // 동적 테이블명은 pgSql.unsafe 사용
+    return pgSql.unsafe(`SELECT * FROM "${table}" LIMIT 500`);
   } else {
     const check = await sqliteDb.execute({
       sql: `SELECT name FROM sqlite_master WHERE type='table' AND name=?`, args: [table],
@@ -281,12 +262,10 @@ async function adminGetRows(table) {
 // ── DB 어드민: 단건 삭제 ──────────────────────────────────────
 async function adminDeleteRow(table, id) {
   if (USE_POSTGRES) {
-    const check = await sql`SELECT table_name FROM information_schema.tables
-                             WHERE table_schema='public' AND table_name=${table}`;
+    const check = await pgSql`SELECT table_name FROM information_schema.tables
+                               WHERE table_schema='public' AND table_name=${table}`;
     if (!check[0]) throw new Error('존재하지 않는 테이블입니다');
-    const { neon } = require('@neondatabase/serverless');
-    const rawSql = neon(process.env.DATABASE_URL || process.env.POSTGRES_URL);
-    const rows = await rawSql(`DELETE FROM "${table}" WHERE id=$1 RETURNING id`, [id]);
+    const rows = await pgSql.unsafe(`DELETE FROM "${table}" WHERE id=$1 RETURNING id`, [id]);
     return rows.length > 0;
   } else {
     const check = await sqliteDb.execute({
