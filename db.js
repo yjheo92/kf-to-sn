@@ -2,7 +2,7 @@
  * db.js — @libsql/client 기반 SQLite 임시저장/불러오기 모듈
  * 로컬: file:data/drafts.db  /  Turso: LIBSQL_URL + LIBSQL_AUTH_TOKEN 환경변수
  */
-const { createClient } = require('@libsql/client');
+const { createClient } = require('@libsql/client/node');
 const path = require('path');
 const fs = require('fs');
 

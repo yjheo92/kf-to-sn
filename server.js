@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const JSZip = require('jszip');
 require('dotenv').config();
 
@@ -15,16 +14,16 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024 },
 });
 
 // Multiple files: HTML + JS + CSS
 const multiUpload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(),
   limits: { fileSize: 200 * 1024 * 1024 },
 }).fields([
   { name: 'htmlFile', maxCount: 1 },
@@ -72,8 +71,7 @@ app.post('/api/analyze', upload.single('htmlFile'), async (req, res) => {
     if (!req.file)
       return res.status(400).json({ success: false, error: 'HTML 파일을 업로드하세요' });
 
-    const htmlContent = fs.readFileSync(req.file.path, 'utf-8');
-    fs.unlinkSync(req.file.path);
+    const htmlContent = req.file.buffer.toString('utf-8');
 
     const analysis = parseKissflowHTML(htmlContent, [], []);
     const analysisId = `analysis_${Date.now()}`;
@@ -81,7 +79,6 @@ app.post('/api/analyze', upload.single('htmlFile'), async (req, res) => {
 
     res.json({ success: true, analysisId, ...formatAnalysisResponse(analysis) });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -90,14 +87,10 @@ app.post('/api/analyze', upload.single('htmlFile'), async (req, res) => {
 // API: 다중 파일 업로드 (HTML + JS + CSS) or ZIP
 // ─────────────────────────────────────────────────────────────
 app.post('/api/analyze-folder', multiUpload, async (req, res) => {
-  const uploadedPaths = [];
   try {
     // Case 1: ZIP file
     if (req.files?.zipFile?.[0]) {
-      const zipPath = req.files.zipFile[0].path;
-      uploadedPaths.push(zipPath);
-
-      const zipBuffer = fs.readFileSync(zipPath);
+      const zipBuffer = req.files.zipFile[0].buffer;
       const zip = await JSZip.loadAsync(zipBuffer);
 
       let htmlContent = '';
@@ -125,7 +118,6 @@ app.post('/api/analyze-folder', multiUpload, async (req, res) => {
       const analysisId = `analysis_${Date.now()}`;
       analysisCache[analysisId] = analysis;
 
-      cleanup(uploadedPaths);
       return res.json({ success: true, analysisId, ...formatAnalysisResponse(analysis) });
     }
 
@@ -134,28 +126,25 @@ app.post('/api/analyze-folder', multiUpload, async (req, res) => {
     if (!htmlFile)
       return res.status(400).json({ success: false, error: 'HTML 파일을 업로드하세요' });
 
-    uploadedPaths.push(htmlFile.path);
-    const htmlContent = fs.readFileSync(htmlFile.path, 'utf-8');
+    const htmlContent = htmlFile.buffer.toString('utf-8');
 
-    const jsFiles = (req.files?.jsFiles || []).map(f => {
-      uploadedPaths.push(f.path);
-      return { name: f.originalname, content: fs.readFileSync(f.path, 'utf-8') };
-    });
+    const jsFiles = (req.files?.jsFiles || []).map(f => ({
+      name: f.originalname,
+      content: f.buffer.toString('utf-8'),
+    }));
 
-    const cssFiles = (req.files?.cssFiles || []).map(f => {
-      uploadedPaths.push(f.path);
-      return { name: f.originalname, content: fs.readFileSync(f.path, 'utf-8') };
-    });
+    const cssFiles = (req.files?.cssFiles || []).map(f => ({
+      name: f.originalname,
+      content: f.buffer.toString('utf-8'),
+    }));
 
     const analysis = parseKissflowHTML(htmlContent, jsFiles, cssFiles);
     const analysisId = `analysis_${Date.now()}`;
     analysisCache[analysisId] = analysis;
 
-    cleanup(uploadedPaths);
     res.json({ success: true, analysisId, ...formatAnalysisResponse(analysis) });
 
   } catch (error) {
-    cleanup(uploadedPaths);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -245,12 +234,6 @@ function formatAnalysisResponse(analysis) {
     clientScripts: analysis.clientScripts,
     jsConditionsFound: analysis.jsConditionsFound,
   };
-}
-
-function cleanup(paths) {
-  for (const p of paths) {
-    try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch {}
-  }
 }
 
 // ═════════════════════════════════════════════════════════════
